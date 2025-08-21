@@ -2,17 +2,17 @@ services:
   - type: web
     name: market-agent-web
     env: python
-    plan: starter
+    plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn api.app:app --host 0.0.0.0 --port $PORT"
     autoDeploy: true
     envVars:
       - key: TZ
         value: America/Argentina/Buenos_Aires
-  - type: worker
+  - type: web
     name: market-agent-worker
     env: python
-    plan: starter
+    plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python -m agent.main"
     autoDeploy: true
