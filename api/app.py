@@ -3,8 +3,20 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pathlib import Path
 from normalize.instruments import load_instruments, save_instruments
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(title="Market Agent API")
+
+
+origins = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o for o in origins if o],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class NewInstrument(BaseModel):
     symbol: str
