@@ -1,0 +1,9 @@
+app:
+  timezone: America/Argentina/Buenos_Aires
+  prices_interval_sec: 30
+  news_interval_sec: 60
+  rules_tick_sec: 15
+  provider_defaults:
+    prices: yfinance
+notify:
+  channel: console   # console | telegram

@@ -1,0 +1,19 @@
+- id: momentum_breakout
+  kind: equity
+  enabled: true
+  params:
+    sma_window: 20
+    min_zscore: 1.0
+  notify:
+    channel: console
+    min_score: 0.5
+- id: value_gap_equity
+  kind: equity
+  enabled: false
+  params:
+    ev_ebitda_percentile_max: 20
+    roic_over_wacc: true
+    lookback_days: 252
+  notify:
+    channel: console
+    min_score: 0.6

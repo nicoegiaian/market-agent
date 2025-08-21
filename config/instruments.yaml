@@ -1,0 +1,15 @@
+- symbol: GGAL.BA
+  instrument_id: ISIN-AR-GGAL
+  type: equity
+  currency: ARS
+  source: yfinance
+- symbol: YPFD.BA
+  instrument_id: ISIN-AR-YPFD
+  type: equity
+  currency: ARS
+  source: yfinance
+- symbol: PAMP.BA
+  instrument_id: ISIN-AR-PAMP
+  type: equity
+  currency: ARS
+  source: yfinance
