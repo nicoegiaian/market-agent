@@ -1,9 +1,11 @@
 import os, yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from pathlib import Path
 from normalize.instruments import load_instruments, save_instruments
 from fastapi.middleware.cors import CORSMiddleware
+from agent.main import load_rules, tick as agent_tick
+
 
 
 app = FastAPI(title="Market Agent API")
@@ -24,6 +26,14 @@ class NewInstrument(BaseModel):
     type: str
     currency: str = "ARS"
     source: str = "yfinance"
+
+@app.post("/run-tick")
+async def run_tick(background: BackgroundTasks):
+    async def _run():
+        rules = await load_rules()
+        await agent_tick(rules)
+    background.add_task(_run)
+    return {"ok": True}
 
 @app.get("/healthz")
 async def healthz():
