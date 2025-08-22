@@ -82,21 +82,33 @@ async def run_tick(background: BackgroundTasks, authorization: str | None = Head
     background.add_task(_run)
     return {"ok": True}
 
+from fastapi import HTTPException, Query
+from normalize.instruments import load_instruments
+from connectors.prices.yfinance import YFPrices
+
 @app.get("/prices")
-async def prices(instrument_id: str, points: int = 60):
-	try:
-    	insts = load_instruments()
-    	match = next((i for i in insts if i.instrument_id == instrument_id), None)
-    	if not match:
-        	raise HTTPException(status_code=404, detail="instrument_id not found")
+async def prices(
+    instrument_id: str = Query(..., description="ID del instrumento definido en instruments.yaml"),
+    points: int = Query(60, ge=10, le=400),
+):
+    # 1) Buscar el instrumento por ID
+    insts = load_instruments()
+    match = next((i for i in insts if i.instrument_id == instrument_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="instrument_id not found")
 
-    	yf = YFPrices()
+    # 2) Traer barras con el conector (versión async)
+    yf = YFPrices()
+    try:
+        bars_all = await yf.fetch_bars([match], timeframe="1d")  # devuelve List[Bar]
+    except TypeError:
+        # Si tu implementación de fetch_bars no es async, usamos el método sync
+        bars_all = yf._fetch_many(match)
 
-    	# ✅ USAR el método async (y filtrar por el instrumento pedido)
-    	bars_all = await yf.fetch_bars([match])   # devuelve lista de Bars
-    	bars = [b for b in bars_all if b.instrument_id == match.instrument_id]
+    # 3) Filtrar y armar la serie (máx. N puntos)
+    bars = [b for b in bars_all if getattr(b, "instrument_id", None) == instrument_id]
+    series = [{"t": b.ts.isoformat(), "c": b.close} for b in bars[-points:]] if bars else []
 
-    	series = [{"t": b.ts.isoformat(), "c": b.close} for b in bars[-points:]] if bars else []
-    	return {"instrument_id": instrument_id, "series": series}
-	except Exception as e:
-    	raise HTTPException(status_code=502,detail="upstream data unavailable")
+    return {"instrument_id": instrument_id, "series": series}
+
+
