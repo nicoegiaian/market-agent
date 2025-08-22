@@ -65,8 +65,11 @@ async def add_instrument(body: NewInstrument):
         raise HTTPException(status_code=400, detail="instrument_id already exists")
     items.append(body)  # Pydantic model is compatible with our save function
     save_instruments(items)
-    return [i.model_dump() for i in load_instruments()]
+    return {"ok": True}
 
+@app.get("/instruments")
+async def list_instruments():
+    return [i.model_dump() for i in load_instruments()]
 
 # NUEVO: dispara un ciclo del agente y vuelve enseguida
 @app.post("/run-tick")
