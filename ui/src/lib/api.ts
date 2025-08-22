@@ -18,3 +18,15 @@ export async function getRules() { return api<Rule[]>('/rules') }
 export async function addInstrument(body: {
   symbol: string; instrument_id: string; type: string; currency?: string; source?: string;
 }) { return api<{ok: boolean}>('/instruments', { method: 'POST', body: JSON.stringify(body) }) }
+
+export type Instrument = { symbol: string; instrument_id: string; type: string; currency: string; source: string }
+
+export async function getStatus() { return api<{last_tick: string|null; signals_count: number}>('/status') }
+export async function getInstruments() { return api<Instrument[]>('/instruments') }
+export async function getPrices(instrument_id: string) {
+  return api<{instrument_id: string; series: {t:string; c:number}[]}>('/prices?instrument_id='+encodeURIComponent(instrument_id))
+}
+export async function getSignals() {
+  return api<Array<{instrument_id:string; rule_id:string; ts:string; direction:'buy'|'sell'|'watch'; score:number; reason:string; details:any}>>('/signals')
+}
+

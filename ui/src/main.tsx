@@ -6,6 +6,8 @@ import './index.css'
 import Dashboard from './pages/Dashboard'
 import Instruments from './pages/Instruments'
 import Rules from './pages/Rules'
+import Signals from './pages/Signals'
+
 
 const router = createBrowserRouter([
   {
@@ -24,3 +26,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <RouterProvider router={router} />
   </React.StrictMode>
 )
+
+{ path: 'signals', element: <Signals /> },
+

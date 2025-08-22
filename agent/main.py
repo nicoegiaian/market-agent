@@ -6,6 +6,7 @@ from normalize.instruments import load_instruments
 from connectors.prices.yfinance import YFPrices
 from rules_engine.registry import RULES_REGISTRY
 from models import Signal
+from agent.state import set_last_tick, set_signals
 
 SETTINGS = yaml.safe_load(Path("config/settings.yaml").read_text())
 RULES_CFG = yaml.safe_load(Path("config/rules.yaml").read_text())
@@ -42,12 +43,16 @@ async def notify(signals: list[Signal]):
 
 async def tick(rules):
     bars_by_inst = await gather_bars()
-    all_signals: list[Signal] = []
+    all_signals = []
     for rid, rule in rules.items():
         sigs = await rule.compute(bars_by_inst)
         all_signals.extend(sigs)
+    # NUEVO: guardar estado en memoria para la API
+    set_signals(all_signals)
+    set_last_tick(datetime.utcnow())
     if all_signals:
         await notify(all_signals)
+
 
 async def main():
     rules = await load_rules()
@@ -61,3 +66,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

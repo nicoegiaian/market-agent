@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getHealth, getRules, type Rule } from '@/lib/api'
+import { getHealth, getRules, getStatus, getInstruments, getPrices, type Rule } from '@/lib/api'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
-// Nota: este gráfico usa datos mock hasta que exista GET /prices
-function Sparkline() {
-  const data = useMemo(() => Array.from({length: 24}, (_,i)=>({x:i, y: 100 + Math.sin(i/2)*5 + Math.random()*2})), [])
+function Sparkline({ data }: { data: {x:number; y:number}[] }) {
   return (
     <div className="h-24">
       <ResponsiveContainer width="100%" height="100%">
@@ -19,18 +17,36 @@ function Sparkline() {
 }
 
 export default function Dashboard() {
-  const [health, setHealth] = useState<string>('…')
+  const [health, setHealth] = useState('…')
   const [rules, setRules] = useState<Rule[]>([])
-  const [err, setErr] = useState<string>('')
+  const [status, setStatus] = useState<{last_tick:string|null; signals_count:number}>({last_tick:null, signals_count:0})
+  const [symbols, setSymbols] = useState<{label:string; id:string}[]>([])
+  const [selected, setSelected] = useState<string>('')
+  const [series, setSeries] = useState<{x:number; y:number}[]>([])
+  const [err, setErr] = useState('')
 
   useEffect(()=>{
     getHealth().then(r=>setHealth(r.status)).catch(e=>setErr(String(e)))
     getRules().then(setRules).catch(()=>{})
+    getStatus().then(setStatus).catch(()=>{})
+    getInstruments().then(list=>{
+      const opts = list.map(i=>({label: `${i.symbol}`, id: i.instrument_id}))
+      setSymbols(opts)
+      if (opts[0]) setSelected(opts[0].id)
+    }).catch(()=>{})
   },[])
+
+  useEffect(()=>{
+    if (!selected) return
+    getPrices(selected).then(r=>{
+      const data = r.series.map((p, idx)=>({x: idx, y: p.c}))
+      setSeries(data)
+    }).catch(()=>setSeries([]))
+  },[selected])
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <div className="card">
           <div className="text-sm text-slate-600">API Health</div>
           <div className="text-xl font-semibold mt-1">{health}</div>
@@ -41,15 +57,25 @@ export default function Dashboard() {
           <div className="text-xl font-semibold mt-1">{rules.filter(r=>r.enabled).length}</div>
         </div>
         <div className="card">
-          <div className="text-sm text-slate-600">Preview Sparkline</div>
-          <Sparkline />
+          <div className="text-sm text-slate-600">Last Tick (UTC)</div>
+          <div className="text-xl font-semibold mt-1">{status.last_tick ? new Date(status.last_tick).toLocaleString() : '—'}</div>
+          <div className="text-xs text-slate-500 mt-1">Signals last tick: {status.signals_count}</div>
+        </div>
+        <div className="card">
+          <div className="text-sm text-slate-600 mb-2">Instrument</div>
+          <select className="input" value={selected} onChange={e=>setSelected(e.target.value)}>
+            {symbols.map(o=> <option value={o.id} key={o.id}>{o.label}</option>)}
+          </select>
         </div>
       </div>
 
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Rules</h2>
-        </div>
+        <div className="text-sm text-slate-600 mb-2">Price (sparkline)</div>
+        <Sparkline data={series} />
+      </div>
+
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-3">Rules</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -78,3 +104,4 @@ export default function Dashboard() {
     </div>
   )
 }
+
