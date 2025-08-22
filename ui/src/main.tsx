@@ -1,13 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+
 import App from './App'
 import './index.css'
+
 import Dashboard from './pages/Dashboard'
 import Instruments from './pages/Instruments'
 import Rules from './pages/Rules'
 import Signals from './pages/Signals'
-
 
 const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'instruments', element: <Instruments /> },
       { path: 'rules', element: <Rules /> },
+      { path: 'signals', element: <Signals /> }, // <- acá adentro
     ],
   },
 ])
@@ -26,6 +28,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <RouterProvider router={router} />
   </React.StrictMode>
 )
-
-{ path: 'signals', element: <Signals /> },
 
