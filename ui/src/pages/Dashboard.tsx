@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getHealth, getRules, getStatus, getInstruments, getPrices, type Rule } from '@/lib/api'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -30,7 +30,7 @@ export default function Dashboard() {
     getRules().then(setRules).catch(()=>{})
     getStatus().then(setStatus).catch(()=>{})
     getInstruments().then(list=>{
-      const opts = list.map(i=>({label: `${i.symbol}`, id: i.instrument_id}))
+      const opts = list.map(i=>({label: i.symbol, id: i.instrument_id}))
       setSymbols(opts)
       if (opts[0]) setSelected(opts[0].id)
     }).catch(()=>{})
