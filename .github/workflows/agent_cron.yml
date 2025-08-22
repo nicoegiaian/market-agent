@@ -1,12 +1,22 @@
 name: agent-cron
+
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *"   # cada 5 minutos (UTC)
+  workflow_dispatch: {}      # permite lanzarlo manualmente
+
+permissions:
+  contents: read
+
 jobs:
   ping:
     runs-on: ubuntu-latest
+    env:
+      AGENT_TICK_URL: ${{ secrets.AGENT_TICK_URL }}
+      AGENT_TOKEN: ${{ secrets.AGENT_TOKEN }}
     steps:
-      - run: curl -s -X POST "$AGENT_TICK_URL" -H "Authorization: Bearer $AGENT_TOKEN"
-        env:
-          AGENT_TICK_URL: ${{ secrets.AGENT_TICK_URL }}
-          AGENT_TOKEN: ${{ secrets.AGENT_TOKEN }}
+      - name: Trigger tick
+        shell: bash
+        run: |
+          curl -fsS -X POST "$AGENT_TICK_URL" \
+            -H "Authorization: Bearer $AGENT_TOKEN"
