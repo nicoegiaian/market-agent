@@ -13,3 +13,8 @@
   type: equity
   currency: ARS
   source: yfinance
+- symbol: AAPL
+  instrument_id: AAPL_US
+  type: equity
+  currency: USD
+  source: yfinance
