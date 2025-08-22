@@ -1,0 +1,12 @@
+name: agent-cron
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s -X POST "$AGENT_TICK_URL" -H "Authorization: Bearer $AGENT_TOKEN"
+        env:
+          AGENT_TICK_URL: ${{ secrets.AGENT_TICK_URL }}
+          AGENT_TOKEN: ${{ secrets.AGENT_TOKEN }}
