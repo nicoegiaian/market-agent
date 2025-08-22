@@ -84,19 +84,19 @@ async def run_tick(background: BackgroundTasks, authorization: str | None = Head
 
 @app.get("/prices")
 async def prices(instrument_id: str, points: int = 60):
-try:
-    insts = load_instruments()
-    match = next((i for i in insts if i.instrument_id == instrument_id), None)
-    if not match:
-        raise HTTPException(status_code=404, detail="instrument_id not found")
+	try:
+    	insts = load_instruments()
+    	match = next((i for i in insts if i.instrument_id == instrument_id), None)
+    	if not match:
+        	raise HTTPException(status_code=404, detail="instrument_id not found")
 
-    yf = YFPrices()
+    	yf = YFPrices()
 
-    # ✅ USAR el método async (y filtrar por el instrumento pedido)
-    bars_all = await yf.fetch_bars([match])   # devuelve lista de Bars
-    bars = [b for b in bars_all if b.instrument_id == match.instrument_id]
+    	# ✅ USAR el método async (y filtrar por el instrumento pedido)
+    	bars_all = await yf.fetch_bars([match])   # devuelve lista de Bars
+    	bars = [b for b in bars_all if b.instrument_id == match.instrument_id]
 
-    series = [{"t": b.ts.isoformat(), "c": b.close} for b in bars[-points:]] if bars else []
-    return {"instrument_id": instrument_id, "series": series}
-except Exception as e:
-    raise HTTPException(status_code=502,detail="upstream data unavailable")
+    	series = [{"t": b.ts.isoformat(), "c": b.close} for b in bars[-points:]] if bars else []
+    	return {"instrument_id": instrument_id, "series": series}
+	except Exception as e:
+    	raise HTTPException(status_code=502,detail="upstream data unavailable")
