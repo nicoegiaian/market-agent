@@ -16,6 +16,15 @@ function Sparkline({ data }: { data: {x:number; y:number}[] }) {
   )
 }
 
+function relativeFromNow(iso: string) {
+  const d = new Date(iso).getTime()
+  const diff = Math.max(0, Math.floor((Date.now() - d) / 1000))
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`
+  return `${Math.floor(diff/86400)}d ago`
+}
+
 export default function Dashboard() {
   const [health, setHealth] = useState('…')
   const [rules, setRules] = useState<Rule[]>([])
@@ -29,6 +38,10 @@ export default function Dashboard() {
     getHealth().then(r=>setHealth(r.status)).catch(e=>setErr(String(e)))
     getRules().then(setRules).catch(()=>{})
     getStatus().then(setStatus).catch(()=>{})
+    const id = setInterval(() => {
+       getStatus().then(setStatus).catch(()=>{})
+     }, 30000) // cada 30s
+     return () => clearInterval(id)  
     getInstruments().then(list=>{
       const opts = list.map(i=>({label: i.symbol, id: i.instrument_id}))
       setSymbols(opts)
@@ -57,9 +70,17 @@ export default function Dashboard() {
           <div className="text-xl font-semibold mt-1">{rules.filter(r=>r.enabled).length}</div>
         </div>
         <div className="card">
-          <div className="text-sm text-slate-600">Last Tick (UTC)</div>
-          <div className="text-xl font-semibold mt-1">{status.last_tick ? new Date(status.last_tick).toLocaleString() : '—'}</div>
-          <div className="text-xs text-slate-500 mt-1">Signals last tick: {status.signals_count}</div>
+          <div className="text-sm text-slate-600">Last Tick</div>
+          <div className="text-xl font-semibold mt-1">
+          {status.last_tick
+           ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+             .format(new Date(status.last_tick))
+             : '—'}
+        </div>
+        <div className="text-xs text-slate-500 mt-1">
+          {status.last_tick ? relativeFromNow(status.last_tick) : 'waiting…'}
+          &nbsp;• Signals last tick: {status.signals_count}
+        </div>
         </div>
         <div className="card">
           <div className="text-sm text-slate-600 mb-2">Instrument</div>
