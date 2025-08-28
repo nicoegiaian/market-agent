@@ -1,114 +1,35 @@
-import os, yaml
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Query
-from pydantic import BaseModel
-from pathlib import Path
-from normalize.instruments import load_instruments, save_instruments
-from fastapi.middleware.cors import CORSMiddleware
-from agent.main import load_rules, tick as agent_tick
-from agent.state import get_status, get_signals_dict
-from connectors.prices.yfinance import YFPrices
-
-
-
-
-app = FastAPI(title="Market Agent API")
-
-# CORS (permití Vercel)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"https://.*vercel\.app",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-origins = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o for o in origins if o],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-AGENT_TOKEN = os.getenv("AGENT_TOKEN", "")  # setéalo en Render
-
-
-class NewInstrument(BaseModel):
-    symbol: str
-    instrument_id: str
-    type: str
-    currency: str = "ARS"
-    source: str = "yfinance"
-
-@app.get("/status")
-async def status():
-    return get_status()
-
-@app.get("/signals")
-async def signals():
-    return get_signals_dict()
-
-@app.get("/healthz")
-async def healthz():
-    return {"status": "ok"}
-
-@app.get("/rules")
-async def get_rules():
-    cfg = yaml.safe_load(Path("config/rules.yaml").read_text())
-    return cfg
-
-@app.post("/instruments")
-async def add_instrument(body: NewInstrument):
-    items = load_instruments()
-    if any(i.instrument_id == body.instrument_id for i in items):
-        raise HTTPException(status_code=400, detail="instrument_id already exists")
-    items.append(body)  # Pydantic model is compatible with our save function
-    save_instruments(items)
-    return {"ok": True}
-
-@app.get("/instruments")
-async def list_instruments():
-    return [i.model_dump() for i in load_instruments()]
-
-# NUEVO: dispara un ciclo del agente y vuelve enseguida
-@app.post("/run-tick")
-async def run_tick(background: BackgroundTasks, authorization: str | None = Header(None)):
-    if AGENT_TOKEN and authorization != f"Bearer {AGENT_TOKEN}":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    async def _run():
-        rules = await load_rules()
-        await agent_tick(rules)     # un ciclo: ingesta -> señales -> notificaciones
-    background.add_task(_run)
-    return {"ok": True}
-
 from fastapi import HTTPException, Query
 from normalize.instruments import load_instruments
-from connectors.prices.yfinance import YFPrices
+from connectors.prices.tiingo import fetch_daily as tiingo_fetch_daily
+# (podés dejar yfinance como opcional si querés, pero no lo usaremos en el “happy path”)
 
 @app.get("/prices")
 async def prices(
-    instrument_id: str = Query(..., description="ID del instrumento definido en instruments.yaml"),
+    instrument_id: str = Query(..., description="ID definido en instruments.yaml"),
     points: int = Query(60, ge=10, le=400),
+    provider: str = Query("auto", pattern="^(auto|tiingo|yfinance)$")
 ):
-    # 1) Buscar el instrumento por ID
     insts = load_instruments()
     match = next((i for i in insts if i.instrument_id == instrument_id), None)
     if not match:
         raise HTTPException(status_code=404, detail="instrument_id not found")
 
-    # 2) Traer barras con el conector (versión async)
-    yf = YFPrices()
-    try:
-        bars_all = await yf.fetch_bars([match], timeframe="1d")  # devuelve List[Bar]
-    except TypeError:
-        # Si tu implementación de fetch_bars no es async, usamos el método sync
-        bars_all = yf._fetch_many(match)
+    bars = []
 
-    # 3) Filtrar y armar la serie (máx. N puntos)
-    bars = [b for b in bars_all if getattr(b, "instrument_id", None) == instrument_id]
+    # Happy path: Tiingo si la fuente del instrumento lo indica o si lo fuerzo por query
+    if provider in ("auto", "tiingo") and (match.source == "tiingo" or provider == "tiingo"):
+        bars = await tiingo_fetch_daily(match)
+
+    # (Opcional) fallback a yfinance solo si lo pedís explícitamente por query
+    # if not bars and provider == "yfinance":
+    #     from connectors.prices.yfinance import YFPrices
+    #     yf = YFPrices()
+    #     try:
+    #         bars_all = await yf.fetch_bars([match], timeframe="1d")
+    #     except TypeError:
+    #         bars_all = yf._fetch_many(match)
+    #     bars = [b for b in bars_all if getattr(b, "instrument_id", None) == instrument_id]
+
     series = [{"t": b.ts.isoformat(), "c": b.close} for b in bars[-points:]] if bars else []
-
-    return {"instrument_id": instrument_id, "series": series}
-
+    return {"instrument_id": instrument_id, "series": series, "provider": bars[0].provider if bars else provider}
 

@@ -17,4 +17,4 @@
   instrument_id: AAPL_US
   type: equity
   currency: USD
-  source: yfinance
+  source: tiingo
