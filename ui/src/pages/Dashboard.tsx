@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { getHealth, getRules, getStatus, getInstruments, getPrices, type Rule } from '@/lib/api'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
-function Sparkline({ data }: { data: {x:number; y:number}[] }) {
+function Sparkline({ data }: { data: { x: number; y: number }[] }) {
   return (
     <div className="h-24">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{left: 0, right: 0, top: 8, bottom: 0}}>
+        <LineChart data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
           <Line type="monotone" dataKey="y" dot={false} strokeWidth={2} />
-          <XAxis dataKey="x" hide /><YAxis hide />
+          <XAxis dataKey="x" hide />
+          <YAxis hide />
           <Tooltip />
         </LineChart>
       </ResponsiveContainer>
@@ -20,42 +21,52 @@ function relativeFromNow(iso: string) {
   const d = new Date(iso).getTime()
   const diff = Math.max(0, Math.floor((Date.now() - d) / 1000))
   if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`
-  return `${Math.floor(diff/86400)}d ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
 }
 
 export default function Dashboard() {
   const [health, setHealth] = useState('…')
   const [rules, setRules] = useState<Rule[]>([])
-  const [status, setStatus] = useState<{last_tick:string|null; signals_count:number}>({last_tick:null, signals_count:0})
-  const [symbols, setSymbols] = useState<{label:string; id:string}[]>([])
+  const [status, setStatus] = useState<{ last_tick: string | null; signals_count: number }>({ last_tick: null, signals_count: 0 })
+  const [symbols, setSymbols] = useState<{ label: string; id: string }[]>([])
   const [selected, setSelected] = useState<string>('')
-  const [series, setSeries] = useState<{x:number; y:number}[]>([])
+  const [series, setSeries] = useState<{ x: number; y: number }[]>([])
   const [err, setErr] = useState('')
 
-  useEffect(()=>{
-    getHealth().then(r=>setHealth(r.status)).catch(e=>setErr(String(e)))
-    getRules().then(setRules).catch(()=>{})
-    getStatus().then(setStatus).catch(()=>{})
-    const id = setInterval(() => {
-       getStatus().then(setStatus).catch(()=>{})
-     }, 30000) // cada 30s
-     return () => clearInterval(id)  
-    getInstruments().then(list=>{
-      const opts = list.map(i=>({label: i.symbol, id: i.instrument_id}))
-      setSymbols(opts)
-      if (opts[0]) setSelected(opts[0].id)
-    }).catch(()=>{})
-  },[])
+  // Carga inicial
+  useEffect(() => {
+    getHealth().then(r => setHealth(r.status)).catch(e => setErr(String(e)))
+    getRules().then(setRules).catch(() => {})
+    getStatus().then(setStatus).catch(() => {})
+    getInstruments()
+      .then(list => {
+        const opts = list.map(i => ({ label: i.symbol, id: i.instrument_id }))
+        setSymbols(opts)
+        if (opts[0]) setSelected(opts[0].id)
+      })
+      .catch(() => {})
+  }, [])
 
-  useEffect(()=>{
+  // Poll de estado cada 30s
+  useEffect(() => {
+    const id = setInterval(() => {
+      getStatus().then(setStatus).catch(() => {})
+    }, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Cargar precios al cambiar instrumento
+  useEffect(() => {
     if (!selected) return
-    getPrices(selected).then(r=>{
-      const data = r.series.map((p, idx)=>({x: idx, y: p.c}))
-      setSeries(data)
-    }).catch(()=>setSeries([]))
-  },[selected])
+    getPrices(selected)
+      .then(r => {
+        const data = r.series.map((p, idx) => ({ x: idx, y: p.c }))
+        setSeries(data)
+      })
+      .catch(() => setSeries([]))
+  }, [selected])
 
   return (
     <div className="space-y-6">
@@ -65,27 +76,34 @@ export default function Dashboard() {
           <div className="text-xl font-semibold mt-1">{health}</div>
           {err && <div className="text-xs text-red-600 mt-2">{err}</div>}
         </div>
+
         <div className="card">
           <div className="text-sm text-slate-600">Active Rules</div>
-          <div className="text-xl font-semibold mt-1">{rules.filter(r=>r.enabled).length}</div>
+          <div className="text-xl font-semibold mt-1">{rules.filter(r => r.enabled).length}</div>
         </div>
+
         <div className="card">
           <div className="text-sm text-slate-600">Last Tick</div>
           <div className="text-xl font-semibold mt-1">
-          {status.last_tick
-           ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-             .format(new Date(status.last_tick))
-             : '—'}
+            {status.last_tick
+              ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(status.last_tick))
+              : '—'}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            {status.last_tick ? relativeFromNow(status.last_tick) : 'waiting…'} • Signals last tick: {status.signals_count}
+          </div>
         </div>
-        <div className="text-xs text-slate-500 mt-1">
-          {status.last_tick ? relativeFromNow(status.last_tick) : 'waiting…'}
-          &nbsp;• Signals last tick: {status.signals_count}
-        </div>
+
         <div className="card">
           <div className="text-sm text-slate-600 mb-2">Instrument</div>
-          <select className="input" value={selected} onChange={e=>setSelected(e.target.value)}>
-            {symbols.map(o=> <option value={o.id} key={o.id}>{o.label}</option>)}
+          <select className="input" value={selected} onChange={e => setSelected(e.target.value)}>
+            {symbols.map(o => (
+              <option value={o.id} key={o.id}>
+                {o.label}
+              </option>
+            ))}
           </select>
+          {symbols.length === 0 && <div className="text-xs text-slate-500 mt-2">No instruments found</div>}
         </div>
       </div>
 
@@ -107,11 +125,11 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {rules.map(r=> (
+              {rules.map(r => (
                 <tr key={r.id} className="border-t">
                   <td className="py-2 pr-4 font-mono">{r.id}</td>
                   <td className="py-2 pr-4">{r.kind}</td>
-                  <td className="py-2 pr-4">{r.enabled? 'Yes':'No'}</td>
+                  <td className="py-2 pr-4">{r.enabled ? 'Yes' : 'No'}</td>
                   <td className="py-2 pr-4 text-slate-600">
                     <pre className="whitespace-pre-wrap">{JSON.stringify(r.params, null, 2)}</pre>
                   </td>
