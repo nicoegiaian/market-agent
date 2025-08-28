@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List
 import httpx
 from models import Bar, Instrument
@@ -13,7 +13,7 @@ async def fetch_daily(inst: Instrument, days: int = 90) -> List[Bar]:
     """
     if not TIINGO_TOKEN:
         return []
-    start = (datetime.utcnow() - timedelta(days=days)).date().isoformat()
+    start = (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
     url = f"https://api.tiingo.com/tiingo/daily/{inst.symbol}/prices"
     params = {"startDate": start, "resampleFreq": "daily", "token": TIINGO_TOKEN}
     async with httpx.AsyncClient(timeout=15) as client:
