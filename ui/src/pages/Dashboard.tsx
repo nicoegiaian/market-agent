@@ -81,7 +81,6 @@ export default function Dashboard() {
           {status.last_tick ? relativeFromNow(status.last_tick) : 'waiting…'}
           &nbsp;• Signals last tick: {status.signals_count}
         </div>
-        </div>
         <div className="card">
           <div className="text-sm text-slate-600 mb-2">Instrument</div>
           <select className="input" value={selected} onChange={e=>setSelected(e.target.value)}>
