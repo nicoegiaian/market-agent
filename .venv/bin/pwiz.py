@@ -1,4 +1,4 @@
-#!/home/kotayk/market-agent/.venv/bin/python3
+#!/home/kotayk/market-agent/.venv/bin/python
 
 import datetime
 import os
@@ -61,7 +61,7 @@ def print_models(introspector, tables=None, preserve_order=False,
     header = HEADER % (
         introspector.get_additional_imports(),
         introspector.get_database_class().__name__,
-        introspector.get_database_name().replace('\\', '\\\\'),
+        introspector.get_database_name(),
         ', **%s' % repr(db_kwargs) if db_kwargs else '')
     print_(header)
 
