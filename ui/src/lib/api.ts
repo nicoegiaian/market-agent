@@ -10,7 +10,11 @@ if (!import.meta.env.VITE_API_BASE) {
 export async function fetchInstruments() {
   const r = await fetch(`${BASE}/instruments`);
   if (!r.ok) throw new Error("Failed instruments");
-  return (await r.json()).items as {symbol:string; name:string}[];
+  const data = await r.json();
+  if (!Array.isArray(data) && !Array.isArray(data.items)) {
+    console.warn("fetchInstruments: unexpected response", data);
+  }
+  return Array.isArray(data) ? data : data.items ?? [];
 }
 
 export async function fetchPrices(symbol: string, range = "5d", interval = "5min") {
