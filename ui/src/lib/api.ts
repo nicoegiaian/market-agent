@@ -1,5 +1,11 @@
 // lib/api.ts
-const BASE = import.meta.env.VITE_API_BASE; // Render API
+const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+
+if (!import.meta.env.VITE_API_BASE) {
+  console.warn(
+    "VITE_API_BASE no está definido; usando http://localhost:8000 como valor por defecto"
+  );
+}
 
 export async function fetchInstruments() {
   const r = await fetch(`${BASE}/instruments`);
