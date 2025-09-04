@@ -3,7 +3,7 @@ import os, time, requests
 from functools import lru_cache
 from typing import Literal, Dict, Any
 
-TINGO_API_KEY = os.getenv("TINGO_API_KEY")
+TINGO_API_KEY = os.getenv("TIINGO_API_KEY")
 BASE = "https://api.tiingo.com/tiingo"
 
 class TingoError(Exception): ...
