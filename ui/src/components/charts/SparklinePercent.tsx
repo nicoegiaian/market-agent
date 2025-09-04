@@ -14,7 +14,7 @@ export default function SparklinePercent({ series }: { series: { t:string; c:num
     }));
   }, [series]);
 
-  const last = data.at(-1)?.pct ?? 0;
+  const last = data.length ? data[data.length - 1].pct : 0;
   const isUp = last >= 0;
 
   return (

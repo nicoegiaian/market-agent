@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchPrices } from "@/lib/api";
-import SparklinePercent from "./SparklinePercent";
+import { InstrumentCard } from '@/components/InstrumentCard';
 
 const TF = [
   { label: "1D", range: "1d", interval: "5min" },

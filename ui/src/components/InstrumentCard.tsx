@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchPrices } from "@/lib/api";
-import SparklinePercent from "./SparklinePercent";
+import SparklinePercent from '@/components/charts/SparklinePercent';
 
 const TF = [
   { label: "1D", range: "1d", interval: "5min" },
@@ -25,7 +25,7 @@ export function InstrumentCard({ symbol, name }: { symbol: string; name: string 
   }, [symbol, tf]);
 
   const series = (data?.series ?? []).map(p => ({ t: p.t, c: p.c }));
-  const last = data?.quote?.last ?? series.at(-1)?.c ?? null;
+  const last = data?.quote?.last ?? (series.length ? series[series.length - 1].c : null);
   const base = series[0]?.c ?? null;
   const pct = (last && base) ? ((last - base) / base) * 100 : 0;
   const isUp = (pct ?? 0) >= 0;

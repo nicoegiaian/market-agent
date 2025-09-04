@@ -21,3 +21,20 @@ export async function fetchPrices(symbol: string, range = "5d", interval = "5min
   };
 }
 
+// ---- Stubs para mantener el build estable mientras migrás ----
+export type Rule = { id: string; name: string; active: boolean };
+
+// Si ya tenés endpoints reales, reemplazá por fetch a tu backend.
+export async function getRules(): Promise<Rule[]> {
+  return []; // TODO: reemplazar por fetch(`${BASE}/rules`)
+}
+
+export async function getSignals(): Promise<any[]> {
+  return []; // TODO: reemplazar por fetch(`${BASE}/signals`)
+}
+
+export async function addInstrument(symbol?: string): Promise<{ ok: boolean }> {
+  // TODO: reemplazar por POST `${BASE}/instruments`
+  return { ok: true };
+}
+
